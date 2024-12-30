@@ -2,15 +2,86 @@
 <html lang="en">
 
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
     <title>ArcadeSMP World Save File</title>
-    <meta name="description" content="Download the ArcadeSMP World save file. If you encounter a download quota exceeded message, Try again later.">
+    <meta name="description" content="Download the ArcadeSMP World save file. If you encounter a download quota exceeded message, try again later.">
     <link rel="stylesheet" href="https://download.ceriumnetworks.win/assets/bootstrap-dark-mode.min.css">
     <link rel="icon" type="image/x-icon" href="https://download.ceriumnetworks.win/assets/icons/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="https://download.ceriumnetworks.win/assets/icons/dl-apple-touch-icon-180.png">
     <link rel="icon" type="image/png" sizes="192x192" href="https://download.ceriumnetworks.win/assets/icons/dl-192.png">
-	<style>
-        .file-name {
+    <style>
+        /* Dark theme for the password box */
+        #password-section {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        #password {
+            background-color: #444;
+            color: #fff;
+            border: 1px solid #888;
+            border-radius: 5px;
+            padding: 10px;
+            width: 85%;
+            font-size: 16px;
+        }
+
+        #password:focus {
+            outline: none;
+            border-color: #434746;
+        }
+
+        #show-password-btn {
+            background-color: #434746;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            margin-left: 5px;
+        }
+
+        #show-password-btn:hover {
+            background-color: #545c5a;
+        }
+
+        button {
+            background-color: #434746;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #545c5a;
+        }
+
+        .password-prompt {
+            display: block;
+            margin-bottom: 20px;
+            color: #a30505;
+        }
+		
+		.password-correct {
+            display: block;
+            margin-bottom: 20px;
+            color: #25b00c;
+        }
+
+        #countdown-section {
+            display: none; /* Hide initially */
+        }
+		
+		.file-name {
             color: #00ffcc; /* A soft cyan color suitable for a black background */
             font-weight: bold; /* Make it stand out more */
         }
@@ -29,15 +100,90 @@
         <div class="hero-unit">
             <h1>ArcadeSMP Minecraft World</h1>
             <p class="file-name">File Name: 14BhfMT21pCQa0XwFJvvfTfZRocq9WSzP.zip</p>
-			<p>Yes, the name may seem suspicious, but it's simply the file ID provided by Google.</p>
-			<p style="color: #ffcc00;">If you see a 'Download Quota Exceeded' message, please wait a bit. There's nothing I can do to resolve this.</p>
-            <p>The file will be downloaded in <span id="countdown">5</span> seconds.</p>
-            <p><a href="https://www.googleapis.com/drive/v3/files/14BhfMT21pCQa0XwFJvvfTfZRocq9WSzP?alt=media&key=AIzaSyDVCNpmfKmJ0gPeyZ8YWMca9ZOKz0CWdgs">Download File</a> if it does not download automatically.</p>
+            <p>Yes, the name may seem suspicious, but it's simply the file ID provided by Google.</p>
+			            <!-- Password prompt -->
+            <div id="password-section">
+			<p>Password Locked. Enter the password I provided to you</p>
+                <input type="password" id="password" placeholder="Enter Password" onkeydown="handleKeyDown(event)" />
+                <button id="show-password-btn" onclick="togglePasswordVisibility()">Show</button>
+                <button onclick="checkPassword()">Submit</button>
+            </div>
+
+
+            <p class="password-prompt" id="password-warning" style="display:none;">Incorrect password, please try again.</p>
+
+            <!-- Countdown Section (Hidden initially) -->
+            <div id="countdown-section">
+                <p class="password-correct">Correct Password. The file will be downloaded in <span id="countdown">5</span> seconds.</p>
+				            <p style="color: #ffcc00;">If you see a 'Download Quota Exceeded' message, please try again later. There's nothing I can do to resolve this.</p>
+            </div>
+            
+            <p id="download-info" style="display:none;">File didn't download automatically? <a href="#" id="download-link" style="display:none;">click here to download the file manually.</a></p>
+
         </div>
     </div>
 
-    <script>
-        // Countdown function
+<script>
+    // Predefined password hash and encoded download URL
+    const correctPasswordHash = "df79c0f30f3a459aaf81628c53a8dc33412a5a28e2c103ea6de47681815bd3a0";
+    const encodedDownloadUrl = "aHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vZHJpdmUvdjMvZmlsZXMvMTRCaGZNVDIxcENRYTBYd0ZKdnZmVGZaUm9jcTlXU3pQP2FsdD1tZWRpYSZrZXk9QUl6YVN5RFZDTnBtZkttSjBnUGV5WjhZV01jYTlaT0t6MENXZGdz";
+
+    // Check the entered password and validate it
+    async function checkPassword() {
+        const passwordInput = document.getElementById("password").value;
+
+        if (passwordInput === "") {
+            alert("Please enter the password!");
+            return;
+        }
+
+        // Hash the password input using SHA-256
+        const hashedPassword = await hashPassword(passwordInput);
+
+        // Validate the password hash
+        if (hashedPassword === correctPasswordHash) {
+            showDownloadLink();
+        } else {
+            showIncorrectPasswordWarning();
+        }
+    }
+
+    // Hash the password using SHA-256 and return the hashed value
+    async function hashPassword(password) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+        // Convert the ArrayBuffer to a hexadecimal string
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Show the download link after successful password validation
+    function showDownloadLink() {
+        // Hide the password section and show the countdown section
+        document.getElementById("password-section").style.display = "none";
+        document.getElementById("password-warning").style.display = "none";
+        document.getElementById("countdown-section").style.display = "block";
+
+        // Decode and display the download link
+        document.getElementById("download-info").style.display = "block";
+        const decodedUrl = atob(encodedDownloadUrl);
+        const downloadLink = document.getElementById("download-link");
+        downloadLink.href = decodedUrl;
+        downloadLink.style.display = "inline";
+
+        startCountdown();
+    }
+
+    // Show the incorrect password warning
+    function showIncorrectPasswordWarning() {
+        document.getElementById("password-warning").style.display = "block";
+        document.getElementById("countdown-section").style.display = "none";
+    }
+
+    // Countdown timer and automatic redirect
+    function startCountdown() {
         let countdownValue = 5; // Starting countdown value in seconds
         const countdownElement = document.getElementById("countdown");
 
@@ -48,10 +194,33 @@
             if (countdownValue <= 0) {
                 clearInterval(countdownInterval);
                 // Redirect to the download URL
-                window.location.href = "https://www.googleapis.com/drive/v3/files/14BhfMT21pCQa0XwFJvvfTfZRocq9WSzP?alt=media&key=AIzaSyDVCNpmfKmJ0gPeyZ8YWMca9ZOKz0CWdgs";
+                window.location.href = document.getElementById("download-link").href;
             }
         }, 1000); // Update every second
-    </script>
+    }
+
+    // Allow Enter key to submit the password
+    function handleKeyDown(event) {
+        if (event.key === "Enter") {
+            checkPassword();
+        }
+    }
+
+    // Toggle the password visibility
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById("password");
+        const showButton = document.getElementById("show-password-btn");
+
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text"; // Show the password
+            showButton.textContent = "Hide"; // Change the button text
+        } else {
+            passwordInput.type = "password"; // Hide the password
+            showButton.textContent = "Show"; // Change the button text
+        }
+    }
+</script>
+
 </body>
 
 </html>
