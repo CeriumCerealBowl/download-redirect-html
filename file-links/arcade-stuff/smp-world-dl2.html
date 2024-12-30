@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+    <title>ArcadeSMP World Save File Link 2</title>
+    <meta name="description" content="Download the ArcadeSMP World save file. If you encounter a download quota exceeded message, just wait for a bit.">
+    <link rel="stylesheet" href="https://download.ceriumnetworks.win/assets/bootstrap-dark-mode.min.css">
+    <link rel="icon" type="image/x-icon" href="https://download.ceriumnetworks.win/assets/icons/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://download.ceriumnetworks.win/assets/icons/dl-apple-touch-icon-180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://download.ceriumnetworks.win/assets/icons/dl-192.png">
+	<style>
+        .file-name {
+            color: #00ffcc; /* A soft cyan color suitable for a black background */
+            font-weight: bold; /* Make it stand out more */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="fill">
+            <div class="container">
+                <a class="brand" href="https://download.ceriumnetworks.win/">Files Download</a>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="hero-unit">
+            <h1>ArcadeSMP Minecraft World</h1>
+            <p class="file-name">File Name: 1ZtiIPcQhRg5KCn91MGLa4PRbAJxQk-98.zip</p>
+			<p>Yes, the name may seem suspicious, but it's simply the file ID provided by Google.</p>
+			<p style="color: #ffcc00;">If you see a 'Download Quota Exceeded' message, please wait a bit. There's nothing I can do to resolve this.</p>
+            <p>The file will be downloaded in <span id="countdown">5</span> seconds.</p>
+            <p><a href="https://www.googleapis.com/drive/v3/files/1ZtiIPcQhRg5KCn91MGLa4PRbAJxQk-98?alt=media&key=AIzaSyDVCNpmfKmJ0gPeyZ8YWMca9ZOKz0CWdgs">Download File</a> if it does not download automatically.</p>
+        </div>
+    </div>
+
+    <script>
+        // Countdown function
+        let countdownValue = 5; // Starting countdown value in seconds
+        const countdownElement = document.getElementById("countdown");
+
+        const countdownInterval = setInterval(() => {
+            countdownValue--;
+            countdownElement.textContent = countdownValue;
+
+            if (countdownValue <= 0) {
+                clearInterval(countdownInterval);
+                // Redirect to the download URL
+                window.location.href = "https://www.googleapis.com/drive/v3/files/1ZtiIPcQhRg5KCn91MGLa4PRbAJxQk-98?alt=media&key=AIzaSyDVCNpmfKmJ0gPeyZ8YWMca9ZOKz0CWdgs";
+            }
+        }, 1000); // Update every second
+    </script>
+</body>
+
+</html>
