@@ -1,0 +1,162 @@
+Write-Host "=======================================================================================" -ForegroundColor DarkYellow
+Write-Host "CeriumNetworks.win Download/Installation Script - Cerium_696" -ForegroundColor Cyan
+Write-Host "VERSION 1.2.4 | UPDATED 11/5/25" -ForegroundColor Magenta
+Write-Host "=======================================================================================" -ForegroundColor DarkYellow
+
+# --- CONFIG (Prompt for Drive Letter) ---
+Write-Host "Enter the drive letter where the Setup directory should be created (e.g., C, D, E):" -ForegroundColor Cyan
+$DriveInput = Read-Host
+if (-not $DriveInput) { $Drive = "C:" } else { if ($DriveInput -notmatch ":$") { $Drive = "${DriveInput}:" } else { $Drive = $DriveInput } }
+
+$BaseDir   = Join-Path $Drive "Setup"
+$DepsDir   = Join-Path $BaseDir "Dependencies"
+$MsDepsDir = Join-Path $DepsDir "Microsoft"
+
+$dirs = @($BaseDir, $DepsDir, $MsDepsDir)
+foreach ($dir in $dirs) { if (-not (Test-Path $dir)) { New-Item -Path $dir -ItemType Directory | Out-Null } }
+
+# ====================================================================
+# Delete old EXE/MSI/ZIP/YAML/INSTALLED
+# ====================================================================
+Write-Host "❓ Delete existing EXE/MSI/ZIP files? (Yes/No)" -ForegroundColor Cyan
+$deleteFiles = Read-Host
+if ($deleteFiles.ToLower() -eq 'yes') {
+    Get-ChildItem -Path $BaseDir, $DepsDir, $MsDepsDir -Include *.exe, *.msi, *.zip, *.yaml, *.installed -Recurse | Remove-Item -Force
+    Write-Host "Old installer files deleted." -ForegroundColor Green
+} else { Write-Host "Skipped deleting files." -ForegroundColor Yellow }
+
+# MAIN SOFTWARE LIST
+$software = @(
+    "Google.Chrome","Notepad++.Notepad++","Mozilla.Firefox","OBSProject.OBSStudio",
+    "Discord.Discord","Nvidia.GeForceNow","StreetPea.chiaki-ng","Brave.Brave",
+    "Google.ChromeRemoteDesktopHost","Valve.Steam","EpicGames.EpicGamesLauncher",
+    "7zip.7zip","Parsec.Parsec","Proton.ProtonVPN","Guru3D.Afterburner",
+    "Modrinth.ModrinthApp","Audacity.Audacity","Apple.iCloud","Apple.iTunes",
+    "RARLab.WinRAR","NordSecurity.NordVPN","RileyTestut.AltServer"
+)
+
+# DEPENDENCIES (Microsoft only)
+$msDependencies = @(
+    "Microsoft.VCRedist.2013.x86","Microsoft.VCRedist.2013.x64","Microsoft.VCRedist.2010.x64",
+    "Microsoft.VCRedist.2005.x86","Microsoft.VCRedist.2008.x86","Microsoft.VCRedist.2008.x64",
+    "Microsoft.VCRedist.2005.x64","Microsoft.VCRedist.2015+.x86","Microsoft.VCRedist.2010.x86",
+    "Microsoft.VCRedist.2012.x64","Microsoft.VCRedist.2012.x86","Microsoft.VCRedist.2015+.x64",
+    "Microsoft.DotNet.DesktopRuntime.7","Microsoft.DotNet.DesktopRuntime.6",
+    "Microsoft.DotNet.DesktopRuntime.5","Microsoft.DotNet.DesktopRuntime.3_1"
+)
+
+# ====================================================================
+# Check if software is installed using Winget
+# ====================================================================
+function Is-Installed {
+    param([string]$Id)
+    $installed = winget list --id $Id 2>$null
+    return ($installed -ne $null -and $installed -ne "")
+}
+
+# ====================================================================
+# DOWNLOAD FUNCTION
+# ====================================================================
+function Download-List {
+    param([string[]]$List, [string]$DownloadPath, [string]$StageName="Download")
+    if (-not (Test-Path $DownloadPath)) { New-Item -Path $DownloadPath -ItemType Directory | Out-Null }
+
+    $total = $List.Count
+    for ($i=0; $i -lt $total; $i++) {
+        $id = $List[$i]
+
+        # Skip if installed
+        if (Is-Installed $id) { Write-Host "$id already installed. Skipping download." -ForegroundColor Yellow; continue }
+
+        # Skip if already downloaded
+        $fileExists = Get-ChildItem -Path $DownloadPath -Recurse -Include *.exe,*.msi,*.zip | Where-Object { $_.Name -like "*$(($id -replace '\.','*'))*" }
+        if ($fileExists) { Write-Host "$id already downloaded. Skipping." -ForegroundColor Yellow; continue }
+
+        $percent = [int](($i/$total)*100)
+        $current = $i + 1
+        Write-Progress -Activity "${StageName}: $id" -Status "Item $current of $total" -PercentComplete $percent -Id 1
+
+        try { winget download --id=$id -e --accept-package-agreements --accept-source-agreements --download-directory $DownloadPath 2>&1 | Out-Null; Write-Host "$id downloaded ($current/$total)" -ForegroundColor Green } 
+        catch { Write-Host "Failed to download $id : $_" -ForegroundColor Red }
+    }
+    Write-Progress -Activity "$StageName" -Completed -Id 1
+}
+
+# ====================================================================
+# INSTALL FUNCTION
+# ====================================================================
+function Install-InDirectory {
+    param([string[]]$Folders)
+    $files = Get-ChildItem -Path $Folders -Include *.exe,*.msi -Recurse -ErrorAction SilentlyContinue
+    if ($files.Count -eq 0) { Write-Host "No installer files found to install." -ForegroundColor Yellow; return }
+
+    $i = 0
+    foreach ($f in $files) {
+        # Skip if installed by marker or system check
+        $installedMarker = Join-Path $f.Directory.FullName "$($f.BaseName).installed"
+        if (Test-Path $installedMarker) { Write-Host "$($f.Name) already installed. Skipping." -ForegroundColor Yellow; continue }
+
+        $i++
+        $percent = [int](($i/$files.Count)*100)
+        Write-Progress -Activity "Installing" -Status "$($f.Name) ($i of $($files.Count))" -PercentComplete $percent -Id 2
+
+        try {
+            $ext = $f.Extension.ToLower()
+            if ($ext -eq '.msi') {
+                Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$($f.FullName)`" /qn /norestart" -Wait -NoNewWindow
+            } else {
+                $silentArgs = @('/S','/quiet','/silent','/qn'); $installed=$false
+                foreach ($sa in $silentArgs) {
+                    try { Start-Process -FilePath $f.FullName -ArgumentList $sa -Wait -NoNewWindow; $installed=$true; break } catch { }
+                }
+                if (-not $installed) { Start-Process -FilePath $f.FullName -Wait -NoNewWindow }
+            }
+            New-Item -Path $installedMarker -ItemType File | Out-Null
+            Write-Host "$($f.Name) installed" -ForegroundColor Green
+        } catch { Write-Host "Failed to install $($f.Name): $_" -ForegroundColor Red }
+    }
+    Write-Progress -Activity "Installing" -Completed -Id 2
+}
+
+# ====================================================================
+# INSTALL MICROSOFT DEPENDENCIES
+# ====================================================================
+function Install-Dependencies { 
+    if ($msDependencies.Count -gt 0) { Download-List -List $msDependencies -DownloadPath $MsDepsDir -StageName 'Dependencies'; Install-InDirectory -Folders @($MsDepsDir) }
+}
+
+# ====================================================================
+# MENU
+# ====================================================================
+Write-Host "" -ForegroundColor Cyan
+Write-Host "Choose an action:" -ForegroundColor Cyan
+Write-Host "1) Download Main Software"
+Write-Host "2) Download + Install Microsoft Dependencies"
+Write-Host "3) Download + Install Main Software"
+Write-Host "4) Download + Install Main Software + Microsoft Dependencies"
+Write-Host "5) Download EVERYTHING"
+Write-Host "6) Download + Install EVERYTHING"
+Write-Host "7) Exit"
+$choice = Read-Host "Enter 1-7"
+
+switch ($choice) {
+    '1' { Download-List -List $software -DownloadPath $BaseDir -StageName 'Software' }
+    '2' { Install-Dependencies }
+    '3' { Download-List -List $software -DownloadPath $BaseDir -StageName 'Software'; Install-InDirectory -Folders @($BaseDir) }
+    '4' { Download-List -List $software -DownloadPath $BaseDir -StageName 'Software'; Install-InDirectory -Folders @($BaseDir); Install-Dependencies }
+    '5' { Download-List -List $software -DownloadPath $BaseDir -StageName 'Software'; Install-Dependencies }
+    '6' { Download-List -List $software -DownloadPath $BaseDir -StageName 'Software'; Install-InDirectory -Folders @($BaseDir); Install-Dependencies }
+    default { Write-Host "Exiting." -ForegroundColor Yellow; exit }
+}
+
+# ====================================================================
+# Delete YAML files
+# ====================================================================
+Write-Host "❓ Delete .yaml files? (Yes/No)" -ForegroundColor Cyan
+$deleteYaml = Read-Host
+if ($deleteYaml.ToLower() -eq "yes") { Remove-Item "$BaseDir\*.yaml","$DepsDir\*.yaml","$MsDepsDir\*.yaml" -Force -ErrorAction SilentlyContinue; Write-Host "All .yaml files removed" -ForegroundColor Green }
+
+Write-Host "=======================================================================================" -ForegroundColor DarkYellow
+Write-Host "Task Complete - Files are in $BaseDir" -ForegroundColor Green
+Write-Host "CeriumNetworks.win Script - Version 1.2.4 (11/5/25)" -ForegroundColor Cyan
+Write-Host "=======================================================================================" -ForegroundColor DarkYellow
