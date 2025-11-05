@@ -56,7 +56,7 @@ function Download-List {
         $percent = [int](($i/$total)*100)
         $current = $i + 1
 
-        Write-Progress -Activity "$StageName: $id" -Status "Item $current of $total" -PercentComplete $percent -Id 1
+        Write-Progress -Activity "$($StageName): $id" -Status "Item $current of $total" -PercentComplete $percent -Id 1
         try {
             if ($StageName -eq 'Dependencies') {
                 winget download --id=$id --accept-package-agreements --accept-source-agreements --download-directory $DownloadPath 2>&1 | Out-Null
@@ -68,7 +68,7 @@ function Download-List {
             Write-Host "Failed to download $id : $_" -ForegroundColor Red
         }
     }
-    Write-Progress -Activity "$StageName" -Completed -Id 1
+    Write-Progress -Activity "$($StageName)" -Completed -Id 1
 }
 
 function Install-InDirectory {
@@ -129,7 +129,6 @@ switch ($choice) {
         Download-List -List $software -DownloadPath $BaseDir -StageName 'Software'
     }
     '2' {
-        # download dependencies; partition Microsoft vs others
         $ms = $dependencies | Where-Object { $_ -notlike 'Amazon*' }
         $others = $dependencies | Where-Object { $_ -like 'Amazon*' }
         if ($ms.Count -gt 0) { Download-List -List $ms -DownloadPath $MsDepsDir -StageName 'Dependencies' }
