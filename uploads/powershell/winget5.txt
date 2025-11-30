@@ -18,7 +18,7 @@ foreach ($dir in $dirs) { if (-not (Test-Path $dir)) { New-Item -Path $dir -Item
 # ====================================================================
 # Delete old EXE/MSI/ZIP/YAML/INSTALLED
 # ====================================================================
-Write-Host "❓ Delete existing EXE/MSI/ZIP files? (Yes/No)" -ForegroundColor Cyan
+Write-Host "Delete existing EXE/MSI/ZIP files? (Yes/No)" -ForegroundColor Cyan
 $deleteFiles = Read-Host
 if ($deleteFiles.ToLower() -eq 'yes') {
     Get-ChildItem -Path $BaseDir, $DepsDir, $MsDepsDir -Include *.exe, *.msi, *.zip, *.yaml, *.installed -Recurse | Remove-Item -Force
@@ -157,11 +157,17 @@ switch ($choice) {
 }
 
 # ====================================================================
-# Delete YAML files
+# Delete YAML files (robust, recursive)
 # ====================================================================
 Write-Host "❓ Delete .yaml files? (Yes/No)" -ForegroundColor Cyan
 $deleteYaml = Read-Host
-if ($deleteYaml.ToLower() -eq "yes") { Remove-Item "$BaseDir\*.yaml","$DepsDir\*.yaml","$MsDepsDir\*.yaml" -Force -ErrorAction SilentlyContinue; Write-Host "All .yaml files removed" -ForegroundColor Green }
+if ($deleteYaml.ToLower() -eq "yes") {
+    Get-ChildItem -Path $BaseDir, $DepsDir, $MsDepsDir -Filter *.yaml -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
+    Write-Host "All .yaml files removed" -ForegroundColor Green
+} else {
+    Write-Host "Skipped deleting YAML files." -ForegroundColor Yellow
+}
+
 
 Write-Host "=======================================================================================" -ForegroundColor DarkYellow
 Write-Host "Task Complete - Files are in $BaseDir" -ForegroundColor Green
