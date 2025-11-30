@@ -159,7 +159,7 @@ switch ($choice) {
 # ====================================================================
 # Delete YAML files (robust, recursive)
 # ====================================================================
-Write-Host "❓ Delete .yaml files? (Yes/No)" -ForegroundColor Cyan
+Write-Host "Delete .yaml files? (Yes/No)" -ForegroundColor Cyan
 $deleteYaml = Read-Host
 if ($deleteYaml.ToLower() -eq "yes") {
     Get-ChildItem -Path $BaseDir, $DepsDir, $MsDepsDir -Filter *.yaml -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
