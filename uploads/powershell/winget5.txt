@@ -1,10 +1,6 @@
-# ====================================================================
-# CeriumNetworks.win Download/Installation Script - Cerium_696
-# VERSION 1.2.4 | UPDATED 11/5/25
-# ====================================================================
 Write-Host "=======================================================================================" -ForegroundColor DarkYellow
 Write-Host "CeriumNetworks.win Download/Installation Script - Cerium_696" -ForegroundColor Cyan
-Write-Host "VERSION 1.2.4 | UPDATED 11/5/25" -ForegroundColor Magenta
+Write-Host "VERSION 1.2.5 | UPDATED 11/29/25" -ForegroundColor Magenta
 Write-Host "=======================================================================================" -ForegroundColor DarkYellow
 
 # --- CONFIG (Prompt for Drive Letter) ---
@@ -59,7 +55,7 @@ function Is-Installed {
 }
 
 # ====================================================================
-# DOWNLOAD FUNCTION (handles "forced download" by removing existing files first)
+# DOWNLOAD FUNCTION
 # ====================================================================
 function Download-List {
     param([string[]]$List, [string]$DownloadPath, [string]$StageName="Download", [switch]$Force)
@@ -70,7 +66,10 @@ function Download-List {
         $id = $List[$i]
 
         # Skip if installed (unless forced)
-        if (-not $Force -and Is-Installed $id) { Write-Host "$id already installed. Skipping download." -ForegroundColor Yellow; continue }
+        if (-not $Force -and (Is-Installed $id)) {
+            Write-Host "$id already installed. Skipping download." -ForegroundColor Yellow
+            continue
+        }
 
         # Remove existing files if forced
         $fileExists = Get-ChildItem -Path $DownloadPath -Recurse -Include *.exe,*.msi,*.zip | Where-Object { $_.Name -like "*$(($id -replace '\.','*'))*" }
@@ -100,7 +99,6 @@ function Install-InDirectory {
 
     $i = 0
     foreach ($f in $files) {
-        # Skip if installed by marker or system check
         $installedMarker = Join-Path $f.Directory.FullName "$($f.BaseName).installed"
         if (Test-Path $installedMarker) { Write-Host "$($f.Name) already installed. Skipping." -ForegroundColor Yellow; continue }
 
@@ -130,14 +128,11 @@ function Install-InDirectory {
 # INSTALL MICROSOFT DEPENDENCIES
 # ====================================================================
 function Install-Dependencies { 
-    if ($msDependencies.Count -gt 0) { 
-        Download-List -List $msDependencies -DownloadPath $MsDepsDir -StageName 'Dependencies' -Force
-        Install-InDirectory -Folders @($MsDepsDir)
-    }
+    if ($msDependencies.Count -gt 0) { Download-List -List $msDependencies -DownloadPath $MsDepsDir -StageName 'Dependencies'; Install-InDirectory -Folders @($MsDepsDir) }
 }
 
 # ====================================================================
-# ACCURATE MENU
+# MENU
 # ====================================================================
 Write-Host "" -ForegroundColor Cyan
 Write-Host "Choose an action:" -ForegroundColor Cyan
@@ -170,5 +165,5 @@ if ($deleteYaml.ToLower() -eq "yes") { Remove-Item "$BaseDir\*.yaml","$DepsDir\*
 
 Write-Host "=======================================================================================" -ForegroundColor DarkYellow
 Write-Host "Task Complete - Files are in $BaseDir" -ForegroundColor Green
-Write-Host "CeriumNetworks.win Script - Version 1.2.4 (11/5/25)" -ForegroundColor Cyan
-Write-Host "=======================================================================================" -ForegroundColor DarkYellow
+Write-Host "CeriumNetworks.win Script - Version 1.2.5 (11/29/25)" -ForegroundColor Cyan
+Write-Host "======================================================================================="
